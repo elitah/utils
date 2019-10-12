@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
 )
 
@@ -10,6 +11,7 @@ func main() {
 	fmt.Println("hello utils")
 
 	testRandom()
+	testPlatform()
 }
 
 func testRandom() {
@@ -31,6 +33,14 @@ func testRandom() {
 	fmt.Printf("random.ModeHexLower(64):\n\t%s\n", random.NewRandomString(random.ModeHexLower, 64))
 
 	fmt.Printf("random.NewRandomUUID:\n\t%s\n", random.NewRandomUUID())
+
+	fmt.Println("--------------------------------------------------------------------------------------------")
+}
+
+func testPlatform() {
+	fmt.Println("--- hello utils/random test ----------------------------------------------------------------")
+
+	fmt.Println(platform.GetPlatformInfo())
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
 }
