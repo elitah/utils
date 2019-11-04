@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/elitah/utils/cpu"
 	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
 )
@@ -12,6 +14,7 @@ func main() {
 
 	testRandom()
 	testPlatform()
+	testCPU()
 }
 
 func testRandom() {
@@ -41,6 +44,22 @@ func testPlatform() {
 	fmt.Println("--- hello utils/random test ----------------------------------------------------------------")
 
 	fmt.Println(platform.GetPlatformInfo())
+
+	fmt.Println("--------------------------------------------------------------------------------------------")
+}
+
+func testCPU() {
+	fmt.Println("--- hello utils/cpu test ----------------------------------------------------------------")
+
+	idle0, total0 := cpu.GetCPUTicks()
+	time.Sleep(1 * time.Second)
+	idle1, total1 := cpu.GetCPUTicks()
+
+	idleTicks := float64(idle1 - idle0)
+	totalTicks := float64(total1 - total0)
+	cpuUsage := 100 * (totalTicks - idleTicks) / totalTicks
+
+	fmt.Printf("CPU usage is %.2f%% [busy: %.0f, total: %.0f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
 }
