@@ -6,6 +6,7 @@ import (
 
 	"github.com/elitah/utils/cpu"
 	"github.com/elitah/utils/exepath"
+	"github.com/elitah/utils/hex"
 	"github.com/elitah/utils/mutex"
 	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
@@ -15,6 +16,7 @@ func main() {
 	fmt.Println("hello utils")
 
 	testExtPath()
+	testHex()
 	testRandom()
 	testPlatform()
 	testCPU()
@@ -26,6 +28,21 @@ func testExtPath() {
 
 	fmt.Printf("exepath.GetExePath():\n\t%s\n", exepath.GetExePath())
 	fmt.Printf("exepath.GetExeDir():\n\t%s\n", exepath.GetExeDir())
+}
+
+func testHex() {
+	fmt.Println("--- hello utils/hex test ----------------------------------------------------------------")
+
+	data := []byte{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
+	result := hex.EncodeToStringWithSeq(data, ' ')
+
+	fmt.Printf("hex.EncodeToString():\n\t%s\n", hex.EncodeToString(data))
+	fmt.Printf("hex.EncodeToStringWithSeq():\n\t%s\n", result)
+	if data, err := hex.DecodeStringWithSeq(result); nil == err {
+		fmt.Printf("hex.DecodeStringWithSeq():\n\t%x\n", data)
+	} else {
+		fmt.Printf("hex.DecodeStringWithSeq():\n\t%v\n", err)
+	}
 }
 
 func testRandom() {
