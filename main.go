@@ -36,8 +36,51 @@ func testHex() {
 	data := []byte{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
 	result := hex.EncodeToStringWithSeq(data, ' ')
 
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~2, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~3, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~4, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~5, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~6, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~7, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~8, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~9, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~0, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~01, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~02, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~03, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890123", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~04, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901234", ' ', true))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~05, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012345", ' ', true))
+
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~2, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~3, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~4, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~5, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~6, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~7, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~8, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~9, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~0, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~01, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~02, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~03, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890123", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~04, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901234", ' ', false))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~05, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012345", ' ', false))
+
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 1))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 3))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 5))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 7))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 1))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 3))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 5))
+	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 7))
+
 	fmt.Printf("hex.EncodeToString():\n\t%s\n", hex.EncodeToString(data))
+
 	fmt.Printf("hex.EncodeToStringWithSeq():\n\t%s\n", result)
+
 	if data, err := hex.DecodeStringWithSeq(result); nil == err {
 		fmt.Printf("hex.DecodeStringWithSeq():\n\t%x\n", data)
 	} else {

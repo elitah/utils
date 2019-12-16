@@ -3,6 +3,10 @@ package hex
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"math"
+	"math/bits"
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -49,6 +53,52 @@ func EncodeToStringWithSeq(src []byte, sep rune) string {
 		return EncodeToString(src, s)
 	}
 	return EncodeToString(src)
+}
+
+func EncodeNumberToStringWithSeq(v interface{}, sep rune, le bool, n ...int) string {
+	var value uint64
+
+	switch result := v.(type) {
+	case string:
+		if s, err := strconv.ParseUint(result, 10, 64); err == nil {
+			value = s
+		}
+	case int8, uint8:
+		return fmt.Sprintf("%02X", result)
+	case int16:
+		return fmt.Sprintf("%02X %02X", (uint16(math.Abs(float64(result)))>>8)&0xFF, uint16(math.Abs(float64(result)))&0xFF)
+	case uint16:
+		return fmt.Sprintf("%02X %02X", (result>>8)&0xFF, result&0xFF)
+	case int:
+		value = uint64(math.Abs(float64(result)))
+	case int32:
+		value = uint64(math.Abs(float64(result)))
+	case uint32:
+		value = uint64(result)
+	case int64:
+		value = uint64(math.Abs(float64(result)))
+	case uint64:
+		value = uint64(result)
+	}
+
+	// 修正max
+	max := bits.Len64(value)/8 + 1
+
+	if 0 < len(n) && 0 < n[0] && max != n[0] {
+		max = n[0]
+	}
+
+	data := make([]byte, max)
+
+	for i, _ := range data {
+		if le {
+			data[i] = byte(value >> (i * 8))
+		} else {
+			data[i] = byte(value >> ((max - i - 1) * 8))
+		}
+	}
+
+	return EncodeToStringWithSeq(data, sep)
 }
 
 func DecodeStringWithSeq(s string) ([]byte, error) {
