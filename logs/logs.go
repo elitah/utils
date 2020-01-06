@@ -2,6 +2,7 @@ package logs
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/astaxie/beego/logs"
@@ -26,9 +27,11 @@ type LoggerAdapter struct {
 }
 
 func NewLoggerAdapter() *LoggerAdapter {
-	return &LoggerAdapter{
+	_logger := &LoggerAdapter{
 		BeeLogger: logs.GetBeeLogger(),
 	}
+	log.SetOutput(_logger)
+	return _logger
 }
 
 func Close() {
