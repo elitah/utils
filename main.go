@@ -6,6 +6,7 @@ import (
 
 	"github.com/elitah/utils/cpu"
 	"github.com/elitah/utils/exepath"
+	"github.com/elitah/utils/hash"
 	"github.com/elitah/utils/hex"
 	"github.com/elitah/utils/mutex"
 	"github.com/elitah/utils/platform"
@@ -21,6 +22,7 @@ func main() {
 	testPlatform()
 	testCPU()
 	testMutex()
+	testHash()
 }
 
 func testExtPath() {
@@ -193,7 +195,7 @@ func testMutex() {
 		}()
 	}
 
-	for i := 0; 1000 > i; i++ {
+	for i := 0; 20 > i; i++ {
 		fmt.Println("---", i)
 		if r1.TryLock() {
 			fmt.Println(n1)
@@ -205,4 +207,32 @@ func testMutex() {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func testHash() {
+	fmt.Println("--- hello utils/hash test ----------------------------------------------------------------")
+
+	hash.SetGobFormat(true)
+
+	fmt.Println(hash.HashToBytes("md5", "123", "456", 123, 456))
+	fmt.Println(hash.HashToBytes("sha1", "123", "456", 123, 456))
+	fmt.Println(hash.HashToBytes("sha256", "123", "456", 123, 456))
+	fmt.Println(hash.HashToBytes("sha512", "123", "456", 123, 456))
+
+	fmt.Println(hash.HashToString("md5", "123", "456", 123, 456))
+	fmt.Println(hash.HashToString("sha1", "123", "456", 123, 456))
+	fmt.Println(hash.HashToString("sha256", "123", "456", 123, 456))
+	fmt.Println(hash.HashToString("sha512", "123", "456", 123, 456))
+
+	hash.SetGobFormat(false)
+
+	fmt.Println(hash.HashToBytes("md5", "123", "456", 123, 456))
+	fmt.Println(hash.HashToBytes("sha1", "123", "456", 123, 456))
+	fmt.Println(hash.HashToBytes("sha256", "123", "456", 123, 456))
+	fmt.Println(hash.HashToBytes("sha512", "123", "456", 123, 456))
+
+	fmt.Println(hash.HashToString("md5", "123", "456", 123, 456))
+	fmt.Println(hash.HashToString("sha1", "123", "456", 123, 456))
+	fmt.Println(hash.HashToString("sha256", "123", "456", 123, 456))
+	fmt.Println(hash.HashToString("sha512", "123", "456", 123, 456))
 }
