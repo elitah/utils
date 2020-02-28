@@ -54,7 +54,10 @@ func Write(h hash.Hash, args ...interface{}) (int, error) {
 				return 0, err
 			}
 		default:
-			if data, ok := arg.(interface {
+			if r, ok := arg.(io.Reader); ok {
+				var buffer [1024]byte
+				io.CopyBuffer(&b, r, buffer[:])
+			} else if data, ok := arg.(interface {
 				Bytes() []byte
 			}); ok {
 				if _, err := b.Write(data.Bytes()); nil != err {
