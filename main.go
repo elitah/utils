@@ -1,20 +1,31 @@
 package main
 
 import (
-	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/elitah/utils/cpu"
 	"github.com/elitah/utils/exepath"
 	"github.com/elitah/utils/hash"
 	"github.com/elitah/utils/hex"
+	"github.com/elitah/utils/logs"
 	"github.com/elitah/utils/mutex"
 	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
+	"github.com/elitah/utils/sqlite"
 )
 
 func main() {
-	fmt.Println("hello utils")
+	logs.SetLogger(logs.AdapterConsole, `{"level":99,"color":true}`)
+	logs.EnableFuncCallDepth(true)
+	logs.SetLogFuncCallDepth(3)
+	logs.Async()
+
+	defer logs.Close()
+
+	logs.Info("hello utils")
 
 	testExtPath()
 	testHex()
@@ -23,106 +34,108 @@ func main() {
 	testCPU()
 	testMutex()
 	testHash()
+
+	testSQLite()
 }
 
 func testExtPath() {
-	fmt.Println("--- hello utils/exepath test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/exepath test ----------------------------------------------------------------")
 
-	fmt.Printf("exepath.GetExePath():\n\t%s\n", exepath.GetExePath())
-	fmt.Printf("exepath.GetExeDir():\n\t%s\n", exepath.GetExeDir())
+	logs.Info("exepath.GetExePath():\n\t%s\n", exepath.GetExePath())
+	logs.Info("exepath.GetExeDir():\n\t%s\n", exepath.GetExeDir())
 }
 
 func testHex() {
-	fmt.Println("--- hello utils/hex test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/hex test ----------------------------------------------------------------")
 
 	data := []byte{0x11, 0x22, 0x33, 0x44, 0x55, 0x66}
 	result := hex.EncodeToStringWithSeq(data, ' ')
 
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~2, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~3, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~4, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~5, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~6, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~7, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~8, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~9, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~0, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~01, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~02, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~03, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890123", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~04, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901234", ' ', true))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~05, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012345", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~2, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~3, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~4, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~5, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~6, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~7, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~8, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~9, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~0, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~01, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~02, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~03, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890123", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~04, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901234", ' ', true))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~05, le):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012345", ' ', true))
 
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~2, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~3, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~4, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~5, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~6, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~7, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~8, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~9, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~0, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~01, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~02, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~03, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890123", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~04, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901234", ' ', false))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq(1~05, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012345", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~2, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~3, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~4, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~5, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~6, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~7, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~8, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~9, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~0, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~01, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~02, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~03, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("1234567890123", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~04, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("12345678901234", ' ', false))
+	logs.Info("hex.EncodeNumberToStringWithSeq(1~05, be):\n\t%s\n", hex.EncodeNumberToStringWithSeq("123456789012345", ' ', false))
 
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 1))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 3))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 5))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 7))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 1))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 3))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 5))
-	fmt.Printf("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 7))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 1))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 3))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 5))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', true, 7))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 1))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 3))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 5))
+	logs.Info("hex.EncodeNumberToStringWithSeq():\n\t%s\n", hex.EncodeNumberToStringWithSeq(-123456789012345, ' ', false, 7))
 
-	fmt.Printf("hex.EncodeToString():\n\t%s\n", hex.EncodeToString(data))
+	logs.Info("hex.EncodeToString():\n\t%s\n", hex.EncodeToString(data))
 
-	fmt.Printf("hex.EncodeToStringWithSeq():\n\t%s\n", result)
+	logs.Info("hex.EncodeToStringWithSeq():\n\t%s\n", result)
 
 	if data, err := hex.DecodeStringWithSeq(result); nil == err {
-		fmt.Printf("hex.DecodeStringWithSeq():\n\t%x\n", data)
+		logs.Info("hex.DecodeStringWithSeq():\n\t%x\n", data)
 	} else {
-		fmt.Printf("hex.DecodeStringWithSeq():\n\t%v\n", err)
+		logs.Info("hex.DecodeStringWithSeq():\n\t%v\n", err)
 	}
 }
 
 func testRandom() {
-	fmt.Println("--- hello utils/random test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/random test ----------------------------------------------------------------")
 
-	fmt.Printf("random.ModeALL(64):\n\t%s\n", random.NewRandomString(random.ModeALL, 64))
-	fmt.Printf("random.ModeNoLower(64):\n\t%s\n", random.NewRandomString(random.ModeNoLower, 64))
-	fmt.Printf("random.ModeNoUpper(64):\n\t%s\n", random.NewRandomString(random.ModeNoUpper, 64))
-	fmt.Printf("random.ModeNoNumber(64):\n\t%s\n", random.NewRandomString(random.ModeNoNumber, 64))
-	fmt.Printf("random.ModeNoLowerNumber(64):\n\t%s\n", random.NewRandomString(random.ModeNoLowerNumber, 64))
-	fmt.Printf("random.ModeNoUpperNumber(64):\n\t%s\n", random.NewRandomString(random.ModeNoUpperNumber, 64))
-	fmt.Printf("random.ModeNoLine(64):\n\t%s\n", random.NewRandomString(random.ModeNoLine, 64))
-	fmt.Printf("random.ModeNoLowerLine(64):\n\t%s\n", random.NewRandomString(random.ModeNoLowerLine, 64))
-	fmt.Printf("random.ModeNoUpperLine(64):\n\t%s\n", random.NewRandomString(random.ModeNoUpperLine, 64))
-	fmt.Printf("random.ModeOnlyLower(64):\n\t%s\n", random.NewRandomString(random.ModeOnlyLower, 64))
-	fmt.Printf("random.ModeOnlyUpper(64):\n\t%s\n", random.NewRandomString(random.ModeOnlyUpper, 64))
-	fmt.Printf("random.ModeOnlyNumber(64):\n\t%s\n", random.NewRandomString(random.ModeOnlyNumber, 64))
-	fmt.Printf("random.ModeHexUpper(64):\n\t%s\n", random.NewRandomString(random.ModeHexUpper, 64))
-	fmt.Printf("random.ModeHexLower(64):\n\t%s\n", random.NewRandomString(random.ModeHexLower, 64))
+	logs.Info("random.ModeALL(64):\n\t%s\n", random.NewRandomString(random.ModeALL, 64))
+	logs.Info("random.ModeNoLower(64):\n\t%s\n", random.NewRandomString(random.ModeNoLower, 64))
+	logs.Info("random.ModeNoUpper(64):\n\t%s\n", random.NewRandomString(random.ModeNoUpper, 64))
+	logs.Info("random.ModeNoNumber(64):\n\t%s\n", random.NewRandomString(random.ModeNoNumber, 64))
+	logs.Info("random.ModeNoLowerNumber(64):\n\t%s\n", random.NewRandomString(random.ModeNoLowerNumber, 64))
+	logs.Info("random.ModeNoUpperNumber(64):\n\t%s\n", random.NewRandomString(random.ModeNoUpperNumber, 64))
+	logs.Info("random.ModeNoLine(64):\n\t%s\n", random.NewRandomString(random.ModeNoLine, 64))
+	logs.Info("random.ModeNoLowerLine(64):\n\t%s\n", random.NewRandomString(random.ModeNoLowerLine, 64))
+	logs.Info("random.ModeNoUpperLine(64):\n\t%s\n", random.NewRandomString(random.ModeNoUpperLine, 64))
+	logs.Info("random.ModeOnlyLower(64):\n\t%s\n", random.NewRandomString(random.ModeOnlyLower, 64))
+	logs.Info("random.ModeOnlyUpper(64):\n\t%s\n", random.NewRandomString(random.ModeOnlyUpper, 64))
+	logs.Info("random.ModeOnlyNumber(64):\n\t%s\n", random.NewRandomString(random.ModeOnlyNumber, 64))
+	logs.Info("random.ModeHexUpper(64):\n\t%s\n", random.NewRandomString(random.ModeHexUpper, 64))
+	logs.Info("random.ModeHexLower(64):\n\t%s\n", random.NewRandomString(random.ModeHexLower, 64))
 
-	fmt.Printf("random.NewRandomUUID:\n\t%s\n", random.NewRandomUUID())
+	logs.Info("random.NewRandomUUID:\n\t%s\n", random.NewRandomUUID())
 
-	fmt.Println("--------------------------------------------------------------------------------------------")
+	logs.Info("--------------------------------------------------------------------------------------------")
 }
 
 func testPlatform() {
-	fmt.Println("--- hello utils/random test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/random test ----------------------------------------------------------------")
 
-	fmt.Println(platform.GetPlatformInfo())
+	logs.Info(platform.GetPlatformInfo())
 
-	fmt.Println("--------------------------------------------------------------------------------------------")
+	logs.Info("--------------------------------------------------------------------------------------------")
 }
 
 func testCPU() {
-	fmt.Println("--- hello utils/cpu test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/cpu test ----------------------------------------------------------------")
 
 	idle0, total0 := cpu.GetCPUTicks()
 	time.Sleep(1 * time.Second)
@@ -132,9 +145,9 @@ func testCPU() {
 	totalTicks := float64(total1 - total0)
 	cpuUsage := 100 * (totalTicks - idleTicks) / totalTicks
 
-	fmt.Printf("CPU usage is %.2f%% [busy: %.0f, total: %.0f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
+	logs.Info("CPU usage is %.2f%% [busy: %.0f, total: %.0f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
 
-	fmt.Println("--------------------------------------------------------------------------------------------")
+	logs.Info("--------------------------------------------------------------------------------------------")
 }
 
 func testMutex() {
@@ -143,7 +156,7 @@ func testMutex() {
 	var n1 int
 	var n2 int
 
-	fmt.Println("--- hello utils/mutex test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/mutex test ----------------------------------------------------------------")
 
 	for i := 0; 30 > i; i++ {
 		go func() {
@@ -196,13 +209,13 @@ func testMutex() {
 	}
 
 	for i := 0; 20 > i; i++ {
-		fmt.Println("---", i)
+		logs.Info("---", i)
 		if r1.TryLock() {
-			fmt.Println(n1)
+			logs.Info(n1)
 			r1.Unlock()
 		}
 		if r2.TryLock() {
-			fmt.Println(n2)
+			logs.Info(n2)
 			r2.Unlock()
 		}
 		time.Sleep(1 * time.Second)
@@ -210,29 +223,99 @@ func testMutex() {
 }
 
 func testHash() {
-	fmt.Println("--- hello utils/hash test ----------------------------------------------------------------")
+	logs.Info("--- hello utils/hash test ----------------------------------------------------------------")
 
 	hash.SetGobFormat(true)
 
-	fmt.Println(hash.HashToBytes("md5", "123", "456", 123, 456))
-	fmt.Println(hash.HashToBytes("sha1", "123", "456", 123, 456))
-	fmt.Println(hash.HashToBytes("sha256", "123", "456", 123, 456))
-	fmt.Println(hash.HashToBytes("sha512", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("md5", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("sha1", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("sha256", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("sha512", "123", "456", 123, 456))
 
-	fmt.Println(hash.HashToString("md5", "123", "456", 123, 456))
-	fmt.Println(hash.HashToString("sha1", "123", "456", 123, 456))
-	fmt.Println(hash.HashToString("sha256", "123", "456", 123, 456))
-	fmt.Println(hash.HashToString("sha512", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("md5", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("sha1", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("sha256", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("sha512", "123", "456", 123, 456))
 
 	hash.SetGobFormat(false)
 
-	fmt.Println(hash.HashToBytes("md5", "123", "456", 123, 456))
-	fmt.Println(hash.HashToBytes("sha1", "123", "456", 123, 456))
-	fmt.Println(hash.HashToBytes("sha256", "123", "456", 123, 456))
-	fmt.Println(hash.HashToBytes("sha512", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("md5", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("sha1", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("sha256", "123", "456", 123, 456))
+	logs.Info(hash.HashToBytes("sha512", "123", "456", 123, 456))
 
-	fmt.Println(hash.HashToString("md5", "123", "456", 123, 456))
-	fmt.Println(hash.HashToString("sha1", "123", "456", 123, 456))
-	fmt.Println(hash.HashToString("sha256", "123", "456", 123, 456))
-	fmt.Println(hash.HashToString("sha512", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("md5", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("sha1", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("sha256", "123", "456", 123, 456))
+	logs.Info(hash.HashToString("sha512", "123", "456", 123, 456))
+}
+
+func testSQLite() {
+	if db := sqlite.NewSQLiteDB(
+		sqlite.WithBackup("test.db", 10, 2048, 32),
+	); nil != db {
+		db.CreateTable("test1", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`)
+		db.CreateTable("test2", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`, true)
+		db.CreateTable("test3", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`)
+		db.CreateTable("test4", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`)
+		db.CreateTable("test5", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`, true)
+		db.CreateTable("test6", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`)
+		db.CreateTable("test7", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`, true)
+		db.CreateTable("test8", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`)
+		db.CreateTable("test9", `id INTEGER PRIMARY KEY AUTOINCREMENT,
+								key INTEGER NOT NULL,
+								timestamp INTEGER NOT NULL DEFAULT (strftime('%s', 'now'))`, true)
+
+		if n, err := db.StartBackup(true); nil == err {
+			logs.Warn("表同步完成，同步条数为%d", n)
+		} else {
+			logs.Error(err)
+		}
+
+		sig := make(chan os.Signal, 1)
+
+		signal.Notify(sig, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
+
+		for {
+			select {
+			case c := <-sig:
+				logs.Warn("Signal: ", c, ", Closing!!!")
+
+				db.Close()
+
+				return
+			case <-time.After(100 * time.Millisecond):
+				//default:
+				if conn, err := db.GetConn(true); nil == err {
+					conn.Exec("INSERT INTO test1 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test2 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test3 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test4 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test5 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test6 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test7 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test8 (key) VALUES (?);", time.Now().Unix())
+					conn.Exec("INSERT INTO test9 (key) VALUES (?);", time.Now().Unix())
+				} else {
+					logs.Error(err)
+				}
+			}
+		}
+	}
 }
