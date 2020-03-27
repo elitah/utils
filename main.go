@@ -72,7 +72,7 @@ func testHttpTools() {
 					}, "text/html"); nil != err {
 						logs.Error(err)
 
-						response.SendHttpCode(http.StatusOK)
+						response.SendHttpCode(http.StatusInternalServerError)
 
 						return
 					}
@@ -92,7 +92,10 @@ func testHttpTools() {
 			}
 			//
 			response.NotFound()
+			//
+			return
 		}
+		w.WriteHeader(http.StatusInternalServerError)
 	})))
 }
 

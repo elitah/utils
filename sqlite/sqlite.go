@@ -227,13 +227,13 @@ func (this *SQLiteDB) StartBackup(auto bool) (int64, error) {
 					}
 					return n, nil
 				} else {
-					return 0, err
+					return 0, fmt.Errorf("unable sync database, %w", err)
 				}
 			} else {
-				return 0, err
+				return 0, fmt.Errorf("unable open database, %w", err)
 			}
 		} else {
-			return 0, err
+			return 0, fmt.Errorf("unable get database connection, %w", err)
 		}
 	}
 	return 0, nil
