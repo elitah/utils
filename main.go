@@ -44,10 +44,12 @@ func main() {
 
 func testHttpTools() {
 	logs.Info(http.ListenAndServe(":38082", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//
+		// 获取通用处理器
 		if response := httptools.NewHTTPWriter(w, r); nil != response {
-			//
-			switch r.URL.Path {
+			// 释放
+			defer response.Release()
+			// 识别路径
+			switch response.GetPath() {
 			case "/":
 				if response.HttpOnlyIs("GET") {
 					response.SendHttpRedirect("/test")
@@ -55,15 +57,25 @@ func testHttpTools() {
 				return
 			case "/test":
 				if response.HttpOnlyIs("GET") {
-					response.SendHttpString(`<html>
+					if _, err := response.TemplateWrite([]byte(`<html>
 	<head>
 		<title>test</title>
 	</head>
 	<body>
-		<p>hello test, <a href="/bye">bye</a></p>
+		<p>hello test, <a href="{{ .Path }}">bye</a></p>
 	</body>
 </html>
-`)
+`), struct {
+						Path string
+					}{
+						Path: "/bye",
+					}, "text/html"); nil != err {
+						logs.Error(err)
+
+						response.SendHttpCode(http.StatusOK)
+
+						return
+					}
 				}
 				return
 			case "/bye":

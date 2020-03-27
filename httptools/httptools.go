@@ -7,7 +7,22 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"sync"
 	"text/template"
+)
+
+var (
+	p1 = &sync.Pool{
+		New: func() interface{} {
+			return &HTTPWriter{}
+		},
+	}
+
+	p2 = &sync.Pool{
+		New: func() interface{} {
+			return &bytes.Buffer{}
+		},
+	}
 )
 
 type HTTPWriter struct {
@@ -17,9 +32,17 @@ type HTTPWriter struct {
 
 func NewHTTPWriter(w http.ResponseWriter, r *http.Request) *HTTPWriter {
 	if nil != w && nil != r {
-		return &HTTPWriter{w, r}
+		if _r, ok := p1.Get().(*HTTPWriter); ok {
+			_r.w = w
+			_r.r = r
+			return _r
+		}
 	}
 	return nil
+}
+
+func (this *HTTPWriter) Release() {
+	p1.Put(this)
 }
 
 func (this *HTTPWriter) GetPath() string {
@@ -38,10 +61,13 @@ func (this *HTTPWriter) SendHttpString(s string) {
 }
 
 func (this *HTTPWriter) SendHttpCode(code int) {
+	// 发HTTP状态码
+	this.w.WriteHeader(code)
 	// 转换HTTP状态码字符串
-	if s := http.StatusText(code); "" != s {
-		this.w.WriteHeader(code)
-		this.SendHttpString(s)
+	if http.StatusOK > code && http.StatusMultipleChoices <= code {
+		if s := http.StatusText(code); "" != s {
+			this.SendHttpString(s)
+		}
 	}
 }
 
@@ -72,33 +98,39 @@ func (this *HTTPWriter) HttpOnlyIs(methods ...string) bool {
 	return false
 }
 
-func (this *HTTPWriter) TemplateWrite(w http.ResponseWriter, content []byte, data interface{}, ct string) (bool, error) {
-	// 解析模板
-	if t, err := template.New(this.GetPath()).Parse(string(content)); nil == err {
-		// 缓冲
-		var b bytes.Buffer
-		// 执行模板
-		if err := t.Execute(&b, data); nil == err {
-			// 发送Content-Type
-			if "" != ct {
-				this.w.Header().Set("Content-Type", fmt.Sprintf("%s; charset=utf-8", ct))
+func (this *HTTPWriter) TemplateWrite(content []byte, data interface{}, ct string) (bool, error) {
+	if b, ok := p2.Get().(*bytes.Buffer); ok {
+		// 还
+		defer p2.Put(b)
+		// 解析模板
+		if t, err := template.New(this.GetPath()).Parse(string(content)); nil == err {
+			// 复位
+			b.Reset()
+			// 执行模板
+			if err := t.Execute(b, data); nil == err {
+				// 发送Content-Type
+				if "" != ct {
+					this.w.Header().Set("Content-Type", fmt.Sprintf("%s; charset=utf-8", ct))
+				}
+				// 发送结果
+				this.w.Write(b.Bytes())
+				// 返回
+				return true, nil
+			} else {
+				return true, err
 			}
-			// 发送结果
-			this.w.Write(b.Bytes())
-			// 返回
-			return true, nil
 		} else {
 			return true, err
 		}
 	} else {
-		return true, err
+		return true, fmt.Errorf("unable get buffer from pool")
 	}
 }
 
-func (this *HTTPWriter) TemplateFileWrite(w http.ResponseWriter, path string, data interface{}) (bool, error) {
+func (this *HTTPWriter) TemplateFileWrite(path string, data interface{}) (bool, error) {
 	// 读取模板文件
 	if content, err := ioutil.ReadFile(path); nil == err {
-		return this.TemplateWrite(w, content, data, mime.TypeByExtension(filepath.Ext(path)))
+		return this.TemplateWrite(content, data, mime.TypeByExtension(filepath.Ext(path)))
 	} else {
 		return false, err
 	}
