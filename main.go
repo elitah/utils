@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,6 +11,7 @@ import (
 	"github.com/elitah/utils/exepath"
 	"github.com/elitah/utils/hash"
 	"github.com/elitah/utils/hex"
+	"github.com/elitah/utils/httptools"
 	"github.com/elitah/utils/logs"
 	"github.com/elitah/utils/mutex"
 	"github.com/elitah/utils/platform"
@@ -27,6 +29,8 @@ func main() {
 
 	logs.Info("hello utils")
 
+	//testHttpTools()
+
 	testExtPath()
 	testHex()
 	testRandom()
@@ -36,6 +40,48 @@ func main() {
 	testHash()
 
 	testSQLite()
+}
+
+func testHttpTools() {
+	logs.Info(http.ListenAndServe(":38082", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//
+		if response := httptools.NewHTTPWriter(w, r); nil != response {
+			//
+			switch r.URL.Path {
+			case "/":
+				if response.HttpOnlyIs("GET") {
+					response.SendHttpRedirect("/test")
+				}
+				return
+			case "/test":
+				if response.HttpOnlyIs("GET") {
+					response.SendHttpString(`<html>
+	<head>
+		<title>test</title>
+	</head>
+	<body>
+		<p>hello test, <a href="/bye">bye</a></p>
+	</body>
+</html>
+`)
+				}
+				return
+			case "/bye":
+				if response.HttpOnlyIs("GET") {
+					response.SendHttpCode(http.StatusOK)
+
+					go func() {
+						time.Sleep(1 * time.Second)
+
+						os.Exit(0)
+					}()
+				}
+				return
+			}
+			//
+			response.NotFound()
+		}
+	})))
 }
 
 func testExtPath() {
@@ -145,7 +191,7 @@ func testCPU() {
 	totalTicks := float64(total1 - total0)
 	cpuUsage := 100 * (totalTicks - idleTicks) / totalTicks
 
-	logs.Info("CPU usage is %.2f%% [busy: %.0f, total: %.0f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
+	logs.Info("CPU usage is %.2f [busy: %.0f, total: %.0f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
 
 	logs.Info("--------------------------------------------------------------------------------------------")
 }
