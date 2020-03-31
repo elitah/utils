@@ -164,6 +164,7 @@ func NewHTTPWriter(w http.ResponseWriter, r *http.Request) *HTTPWriter {
 			_r.r = r
 			return _r
 		}
+		w.WriteHeader(http.StatusInternalServerError)
 	}
 	return nil
 }
