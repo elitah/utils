@@ -12,6 +12,8 @@ import (
 )
 
 var (
+	funcs = make(template.FuncMap)
+
 	p1 = &sync.Pool{
 		New: func() interface{} {
 			return &HTTPWriter{}
@@ -28,17 +30,6 @@ var (
 type HTTPWriter struct {
 	w http.ResponseWriter
 	r *http.Request
-}
-
-func NewHTTPWriter(w http.ResponseWriter, r *http.Request) *HTTPWriter {
-	if nil != w && nil != r {
-		if _r, ok := p1.Get().(*HTTPWriter); ok {
-			_r.w = w
-			_r.r = r
-			return _r
-		}
-	}
-	return nil
 }
 
 func (this *HTTPWriter) Release() {
@@ -133,7 +124,7 @@ func (this *HTTPWriter) TemplateWrite(content []byte, data interface{}, ct strin
 		// 还
 		defer p2.Put(b)
 		// 解析模板
-		if t, err := template.New(this.GetPath()).Parse(string(content)); nil == err {
+		if t, err := template.New(this.GetPath()).Funcs(funcs).Parse(string(content)); nil == err {
 			// 复位
 			b.Reset()
 			// 执行模板
@@ -163,5 +154,22 @@ func (this *HTTPWriter) TemplateFileWrite(path string, data interface{}) (bool, 
 		return this.TemplateWrite(content, data, mime.TypeByExtension(filepath.Ext(path)))
 	} else {
 		return false, err
+	}
+}
+
+func NewHTTPWriter(w http.ResponseWriter, r *http.Request) *HTTPWriter {
+	if nil != w && nil != r {
+		if _r, ok := p1.Get().(*HTTPWriter); ok {
+			_r.w = w
+			_r.r = r
+			return _r
+		}
+	}
+	return nil
+}
+
+func TemplateAddFunc(name string, fn interface{}) {
+	if "" != name && nil != fn {
+		funcs[name] = fn
 	}
 }
