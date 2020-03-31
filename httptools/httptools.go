@@ -55,6 +55,36 @@ func (this *HTTPWriter) SendHttpRedirect(l string) {
 	this.w.WriteHeader(http.StatusFound)
 }
 
+func (this *HTTPWriter) SendJSAlert(args ...string) {
+	var title, msg, redirect string = "提示", "未填写消息内容", "/"
+
+	if 1 <= len(args) && "" != args[0] {
+		title = args[0]
+	}
+
+	if 2 <= len(args) && "" != args[1] {
+		msg = args[1]
+	}
+
+	if 3 <= len(args) && "" != args[2] {
+		redirect = args[2]
+	}
+
+	fmt.Fprintf(this.w, `<!DOCTYPE html>
+<html lang="zh-cn">
+	<head>
+		<title>%s</title>
+	</head>
+	<body>
+		<script>
+		alert('%s');
+		window.location.href = '%s';
+		</script>
+	</body>
+</html>
+`, title, msg, redirect)
+}
+
 func (this *HTTPWriter) SendHttpString(s string) {
 	// 写HTTP数据
 	this.w.Write([]byte(s))
