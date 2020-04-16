@@ -1,9 +1,13 @@
 
 .PHONY: all
-all: fmt build
+all: build
 
 .PHONY: build
-build: utils
+build: init fmt utils
+
+.PHONY: init
+init:
+	@mkdir -p bin
 
 .PHONY: fmt
 fmt:
@@ -11,14 +15,14 @@ fmt:
 
 .PHONY: utils
 utils:
-	@go build -ldflags "-w -s" -o bin/utils
+	@go build -ldflags "-w -s" -o bin/$@
 
 .PHONY: clean
 clean:
-	@rm -rf bin
+	@go clean -i -n -x -cache
+	@rm -rf bin go.sum
 
 .PHONY: distclean
 distclean:
-	@rm -rf bin
-	@go clean --modcache
-	@go clean
+	@go clean -i -n -x --modcache
+	@rm -rf bin go.sum
