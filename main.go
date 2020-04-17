@@ -45,19 +45,26 @@ func main() {
 func testHttpTools() {
 	logs.Info(http.ListenAndServe(":38082", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// 获取通用处理器
-		if response := httptools.NewHTTPWriter(w, r); nil != response {
+		if resp := httptools.NewHttpHandler(r); nil != resp {
+			// 调试模式
+			//resp.Debug(true)
 			// 释放
-			defer response.Release()
+			defer func() {
+				if o := resp.Output(w); "" != o {
+					logs.Info(o)
+				}
+				resp.Release()
+			}()
 			// 识别路径
-			switch response.GetPath() {
+			switch resp.GetPath() {
 			case "/":
-				if response.HttpOnlyIs("GET") {
-					response.SendHttpRedirect("/test")
+				if resp.HttpOnlyIs("GET") {
+					resp.SendHttpRedirect("/test")
 				}
 				return
 			case "/test":
-				if response.HttpOnlyIs("GET") {
-					if _, err := response.TemplateWrite([]byte(`<html>
+				if resp.HttpOnlyIs("GET") {
+					if err := resp.TemplateWrite([]byte(`<html>
 	<head>
 		<title>test</title>
 	</head>
@@ -71,19 +78,15 @@ func testHttpTools() {
 						Path: "/bye",
 					}, "text/html"); nil != err {
 						logs.Error(err)
-
-						response.SendHttpCode(http.StatusInternalServerError)
-
-						return
 					}
 				}
 				return
 			case "/bye":
-				if response.HttpOnlyIs("GET") {
-					response.SendHttpCode(http.StatusOK)
-
+				if resp.HttpOnlyIs("GET") {
+					resp.SendJSAlert("提示", "成功", "/")
+					//
 					go func() {
-						time.Sleep(1 * time.Second)
+						time.Sleep(3 * time.Second)
 
 						os.Exit(0)
 					}()
@@ -91,7 +94,7 @@ func testHttpTools() {
 				return
 			}
 			//
-			response.NotFound()
+			resp.NotFound()
 			//
 			return
 		}
