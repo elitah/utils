@@ -17,6 +17,7 @@ import (
 	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
 	"github.com/elitah/utils/sqlite"
+	"github.com/elitah/utils/wait"
 )
 
 func main() {
@@ -30,6 +31,8 @@ func main() {
 	logs.Info("hello utils")
 
 	//testHttpTools()
+
+	testWait()
 
 	testExtPath()
 	testHex()
@@ -100,6 +103,25 @@ func testHttpTools() {
 		}
 		w.WriteHeader(http.StatusInternalServerError)
 	})))
+}
+
+func testWait() {
+	logs.Info("--- hello utils/wait test ----------------------------------------------------------------")
+
+	logs.Info("wait.Signal(): start")
+
+	wait.Signal(
+		wait.WithNotify(func(s os.Signal) bool {
+			logs.Info(s)
+			return true
+		}),
+		wait.WithSignal(syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM),
+		wait.WithTicket(1, func(t time.Time) {
+			logs.Info(t)
+		}),
+	)
+
+	logs.Info("wait.Signal(): done")
 }
 
 func testExtPath() {
