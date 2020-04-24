@@ -5,15 +5,17 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"mime"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"text/template"
 	"time"
+
+	"github.com/elitah/fast-io"
 )
 
 const (
@@ -230,9 +232,24 @@ func (this *httpHandler) TemplateWrite(content []byte, data interface{}, ct stri
 }
 
 func (this *httpHandler) TemplateFileWrite(path string, data interface{}) (bool, error) {
-	// 读取模板文件
-	if content, err := ioutil.ReadFile(path); nil == err {
-		return true, this.TemplateWrite(content, data, mime.TypeByExtension(filepath.Ext(path)))
+	// 打开模板文件
+	if f, err := os.Open(path); nil == err {
+		// 退出是关闭文件
+		defer f.Close()
+		// 得到buffer
+		if b, ok := p2.Get().(*bytes.Buffer); ok {
+			// 退出是释放buffer
+			defer p2.Put(b)
+			// 快速拷贝
+			if _, err = fast_io.Copy(b, f); nil == err {
+				// 加载模板数据
+				return true, this.TemplateWrite(b.Bytes(), data, mime.TypeByExtension(filepath.Ext(path)))
+			} else {
+				return true, err
+			}
+		} else {
+			return true, fmt.Errorf("no buffer can be used")
+		}
 	} else {
 		return false, err
 	}
