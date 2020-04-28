@@ -1,12 +1,16 @@
 package main
 
 import (
+	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
+	"github.com/elitah/utils/bufferpool"
 	"github.com/elitah/utils/cpu"
 	"github.com/elitah/utils/exepath"
 	"github.com/elitah/utils/hash"
@@ -14,9 +18,11 @@ import (
 	"github.com/elitah/utils/httptools"
 	"github.com/elitah/utils/logs"
 	"github.com/elitah/utils/mutex"
+	"github.com/elitah/utils/number"
 	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
 	"github.com/elitah/utils/sqlite"
+	"github.com/elitah/utils/vhost"
 	"github.com/elitah/utils/wait"
 )
 
@@ -30,6 +36,10 @@ func main() {
 
 	logs.Info("hello utils")
 
+	testNumber()
+
+	//testBufferPool()
+	//testVhost()
 	//testHttpTools()
 
 	testWait()
@@ -45,10 +55,116 @@ func main() {
 	testSQLite()
 }
 
+func testNumber() {
+	logs.Info("--- hello utils/number test ----------------------------------------------------------------")
+
+	logs.Info("IsNumber: %v", number.IsNumeric(nil))
+	logs.Info("IsNumber: %v", number.IsNumeric(5))
+	logs.Info("IsNumber: %v", number.IsNumeric(0x5))
+	logs.Info("IsNumber: %v", number.IsNumeric(0.1))
+
+	if v, err := number.ToInt64(-50); nil == err {
+		logs.Info("ToInt64: %v", v)
+	} else {
+		logs.Info("ToInt64: error: %v", err)
+	}
+
+	if v, err := number.ToInt64(0x50); nil == err {
+		logs.Info("ToInt64: %v", v)
+	} else {
+		logs.Info("ToInt64: error: %v", err)
+	}
+
+	if v, err := number.ToInt64("0x50"); nil == err {
+		logs.Info("ToInt64: %v", v)
+	} else {
+		logs.Info("ToInt64: error: %v", err)
+	}
+}
+
+func testBufferPool() {
+	logs.Info("--- hello utils/bufferpool test ----------------------------------------------------------------")
+
+	logs.Info("--- bufferpool.Get(): start -----------------------------------------------------------------")
+
+	b := bufferpool.Get()
+
+	logs.Info("--- bufferpool.Get(): done ---------------------------------------------------------------")
+
+	logs.Info("--- bufferpool: test function ReadFromLimited ----------------------------------------------------")
+
+	r := strings.NewReader("some io.Reader stream to be read\n")
+
+	b.ReadFromLimited(r, 10)
+
+	logs.Info("bufferpool.ReadFromLimited(): %s", b.String())
+
+	b.Reset()
+
+	b.ReadFromLimited(r, 10)
+
+	logs.Info("bufferpool.ReadFromLimited(): %s", b.String())
+
+	logs.Info("--- bufferpool: test TeeReader -------------------------------------------------")
+
+	if _b := bufferpool.Get(); nil != _b {
+		r = strings.NewReader("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+
+		b.Reset()
+
+		if _r, err := _b.TeeReader(r, 10); nil == err {
+			b.ReadFromLimited(_r, 20)
+		}
+
+		logs.Info("bufferpool.ReadFromLimited(): b: %s", b.String())
+		logs.Info("bufferpool.ReadFromLimited(): _b: %s", _b.String())
+	}
+
+	logs.Info("--- bufferpool: test buffer reference count -------------------------------------")
+
+	b.AddRefer(6)
+
+	for i := 0; !b.IsFree(); i++ {
+		logs.Info(i, b.Free())
+	}
+
+	time.Sleep(time.Second)
+
+	os.Exit(-1)
+}
+
+func testVhost() {
+	logs.Info("--- hello utils/vhost test ----------------------------------------------------------------")
+
+	if listener, err := net.Listen("tcp", ":51180"); nil == err {
+		for {
+			if conn, err := listener.Accept(); nil == err {
+				if httpConn, err := vhost.HTTP(conn); nil == err {
+					logs.Info(httpConn.Host)
+					httpConn.Close()
+				} else {
+					logs.Error(err)
+				}
+				conn.Close()
+			} else {
+				logs.Error(err)
+
+				os.Exit(-1)
+			}
+		}
+	} else {
+		logs.Error(err)
+	}
+}
+
 func testHttpTools() {
+	logs.Info("--- hello utils/httptools test ----------------------------------------------------------------")
+
 	logs.Info(http.ListenAndServe(":38082", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// 获取通用处理器(调试模式)
+		// if resp := httptools.NewHttpHandler(r, true); nil != resp {
 		// 获取通用处理器
-		if resp := httptools.NewHttpHandler(r); nil != resp {
+		if resp := httptools.NewHttpHandler(r, true); nil != resp {
 			// 调试模式
 			//resp.Debug(true)
 			// 释放
@@ -63,6 +179,27 @@ func testHttpTools() {
 			case "/":
 				if resp.HttpOnlyIs("GET") {
 					resp.SendHttpRedirect("/test")
+				}
+				return
+			case "/post":
+				if resp.HttpOnlyIs("GET", "POST") {
+					switch resp.Method {
+					case "GET":
+						resp.SendHTML(`<form action="/post" method="post" enctype="multipart/form-data">`)
+						resp.SendHTML(`<p><input type="file" name="file"></p>`)
+						resp.SendHTML(`<p><input type="text" name="name"></p>`)
+						resp.SendHTML(`<p><input type="submit" value="submit"></p>`)
+						resp.SendHTML(`</form>`)
+					case "POST":
+						if err := resp.GetUpload(func(part *multipart.Part) bool {
+							logs.Info(part)
+							return true
+						}); nil == err {
+							resp.SendHTML(`<h3>ok</h3>`)
+						} else {
+							logs.Error(err)
+						}
+					}
 				}
 				return
 			case "/test":
