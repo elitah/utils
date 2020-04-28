@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-type signalOption func(opts *signalOptions)
+type signalOption func(*signalOptions)
 
 type signalOptions struct {
 	sigList []os.Signal
