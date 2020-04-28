@@ -1,11 +1,12 @@
 package httptools
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -16,37 +17,40 @@ import (
 	"time"
 
 	"github.com/elitah/fast-io"
+	"github.com/elitah/utils/bufferpool"
 )
 
 const (
-	flagDebug = iota
+	flagOutput = iota
+	flagDebug
 
 	flagMax
+
+	flagOutputEnabled
+	flagOutputDisabled
 
 	flagDebugEnabled
 	flagDebugDisabled
 )
 
 var (
+	DebugBufferLength = 32
+
 	funcs = make(template.FuncMap)
 
-	p1 = &sync.Pool{
+	pool = &sync.Pool{
 		New: func() interface{} {
 			return &httpHandler{
 				Request: nil,
 			}
 		},
 	}
-
-	p2 = &sync.Pool{
-		New: func() interface{} {
-			return &bytes.Buffer{}
-		},
-	}
 )
 
 type httpHandler struct {
 	*http.Request
+
+	body io.ReadCloser
 
 	flags [flagMax]uint32
 
@@ -57,24 +61,36 @@ type httpHandler struct {
 
 	start int64
 
-	rb *bytes.Buffer
-	wb *bytes.Buffer
+	rb *bufferpool.Buffer
+	wb *bufferpool.Buffer
 
 	jenc *json.Encoder
 }
 
 func (this *httpHandler) Release() {
-	this.Body.Close()
+	if nil != this.body {
+		this.body.Close()
+	}
 
-	p2.Put(this.rb)
-	p2.Put(this.wb)
+	this.Request.Body.Close()
+
+	this.rb.Free()
+	this.wb.Free()
 
 	this.rb = nil
 	this.wb = nil
 
 	this.jenc = nil
 
-	p1.Put(this)
+	pool.Put(this)
+}
+
+func (this *httpHandler) OutputEnabled(flag bool) {
+	if flag {
+		atomic.StoreUint32(&this.flags[flagOutput], flagOutputEnabled)
+		return
+	}
+	atomic.StoreUint32(&this.flags[flagOutput], flagOutputDisabled)
 }
 
 func (this *httpHandler) Debug(flag bool) {
@@ -95,6 +111,30 @@ func (this *httpHandler) GetJson(v interface{}) error {
 		return json.Unmarshal(this.rb.Bytes(), v)
 	}
 	return nil
+}
+
+func (this *httpHandler) GetUpload(fn func(*multipart.Part) bool) error {
+	if reader, err := this.MultipartReader(); nil == err {
+		for {
+			if part, err := reader.NextPart(); nil == err {
+				if !fn(part) {
+					return nil
+				}
+			} else {
+				if errors.Is(err, io.EOF) {
+					return nil
+				} else {
+					return err
+				}
+			}
+		}
+	} else {
+		return err
+	}
+}
+
+func (this *httpHandler) SetContentType(ct string) {
+	this.contentType = ct
 }
 
 func (this *httpHandler) SendHttpCode(code int) {
@@ -134,7 +174,7 @@ func (this *httpHandler) HttpOnlyIs(methods ...string) bool {
 }
 
 func (this *httpHandler) SendJSAlert(args ...string) {
-	var title, msg, redirect string = "提示", "未填写消息内容", "/"
+	var title, msg, redirect string = "提示", "未填写消息内容", ""
 
 	if 1 <= len(args) && "" != args[0] {
 		title = args[0]
@@ -148,8 +188,17 @@ func (this *httpHandler) SendJSAlert(args ...string) {
 		redirect = args[2]
 	}
 
+	if "" != redirect {
+		msg = fmt.Sprintf(`<script>alert(%s); window.location.href = '%s';</script>`, msg, redirect)
+	} else {
+		msg = fmt.Sprintf(`<h3>%s</h3>`, msg)
+	}
+
 	// 清空缓冲
 	this.wb.Reset()
+
+	// 设置ContentType
+	this.contentType = "text/html"
 
 	fmt.Fprintf(this.wb, `<!DOCTYPE html>
 <html lang="zh-cn">
@@ -157,20 +206,48 @@ func (this *httpHandler) SendJSAlert(args ...string) {
 		<title>%s</title>
 	</head>
 	<body>
-		<script>
-		alert('%s');
-		window.location.href = '%s';
-		</script>
+		%s
 	</body>
 </html>
-`, title, msg, redirect)
+`, title, msg)
 }
 
-func (this *httpHandler) SendHttpString(s string) {
+func (this *httpHandler) SendHTML(args ...interface{}) {
+	// 设置ContentType
+	if "" == this.contentType {
+		this.contentType = "text/html"
+	}
+	// 参数
+	if 2 <= len(args) {
+		if format, ok := args[0].(string); ok {
+			// if format = `<img src="%s" style="width: 100%%" />`
+			if strings.Contains(format, "%") {
+				fmt.Fprintf(this.wb, format, args[1:]...)
+				return
+			}
+		}
+	}
+	//
+	fmt.Fprint(this.wb, args...)
+}
+
+func (this *httpHandler) SendHttpString(args ...interface{}) {
 	// 清空缓冲
 	this.wb.Reset()
+	// 设置ContentType
+	this.contentType = "text/plain"
 	// 写HTTP数据
-	this.wb.WriteString(s)
+	if 2 <= len(args) {
+		if format, ok := args[0].(string); ok {
+			// if format = `<img src="%s" style="width: 100%%" />`
+			if strings.Contains(format, "%") {
+				fmt.Fprintf(this.wb, format, args[1:]...)
+				return
+			}
+		}
+	}
+	//
+	fmt.Fprint(this.wb, args...)
 }
 
 func (this *httpHandler) SendJsonString(s string) {
@@ -206,6 +283,29 @@ func (this *httpHandler) SendJson(v interface{}) error {
 	}
 }
 
+func (this *httpHandler) SendFile(path string) (bool, error) {
+	// 打开模板文件
+	if f, err := os.Open(path); nil == err {
+		// 退出是关闭文件
+		defer f.Close()
+		//
+		this.wb.Reset()
+		//
+		if _, err = fast_io.Copy(this.wb, f); nil == err {
+			this.contentType = mime.TypeByExtension(filepath.Ext(path))
+			return true, nil
+		} else {
+			return true, err
+		}
+	} else {
+		return false, err
+	}
+}
+
+func (this *httpHandler) Write(p []byte) (n int, err error) {
+	return this.wb.Write(p)
+}
+
 func (this *httpHandler) TemplateWrite(content []byte, data interface{}, ct string) error {
 	// 解析模板
 	if t, err := template.New(this.GetPath()).Funcs(funcs).Parse(string(content)); nil == err {
@@ -237,16 +337,13 @@ func (this *httpHandler) TemplateFileWrite(path string, data interface{}) (bool,
 		// 退出是关闭文件
 		defer f.Close()
 		// 得到buffer
-		if b, ok := p2.Get().(*bytes.Buffer); ok {
+		if b := bufferpool.Get(); nil != b {
 			// 退出是释放buffer
-			defer p2.Put(b)
-			// 快速拷贝
-			if _, err = fast_io.Copy(b, f); nil == err {
-				// 加载模板数据
-				return true, this.TemplateWrite(b.Bytes(), data, mime.TypeByExtension(filepath.Ext(path)))
-			} else {
-				return true, err
-			}
+			defer b.Free()
+			// 直接复制
+			b.ReadFrom(f)
+			// 解析
+			return true, this.TemplateWrite(b.Bytes(), data, mime.TypeByExtension(filepath.Ext(path)))
 		} else {
 			return true, fmt.Errorf("no buffer can be used")
 		}
@@ -256,12 +353,16 @@ func (this *httpHandler) TemplateFileWrite(path string, data interface{}) (bool,
 }
 
 func (this *httpHandler) Output(w http.ResponseWriter) string {
-	var debug *bytes.Buffer
+	var debug *bufferpool.Buffer
+
+	if flagOutputDisabled == atomic.LoadUint32(&this.flags[flagOutput]) {
+		return ""
+	}
 
 	if flagDebugEnabled == atomic.LoadUint32(&this.flags[flagDebug]) {
-		if b, ok := p2.Get().(*bytes.Buffer); ok {
+		if b := bufferpool.Get(); nil != b {
 			//
-			defer p2.Put(b)
+			defer b.Free()
 			//
 			b.Reset()
 			//
@@ -288,7 +389,7 @@ func (this *httpHandler) Output(w http.ResponseWriter) string {
 		w.WriteHeader(this.statusCode)
 		// 写数据
 		if 0 < this.wb.Len() {
-			w.Write(this.wb.Bytes())
+			this.wb.WriteTo(w)
 		}
 	}()
 
@@ -307,7 +408,7 @@ func (this *httpHandler) Output(w http.ResponseWriter) string {
 			}
 			//
 			switch this.contentType {
-			case "text/html", "text/css", "text/javascript", "application/x-javascript", "text/json", "application/json":
+			case "text/plain", "text/html", "text/css", "text/javascript", "application/x-javascript", "text/json", "application/json":
 				this.contentType = fmt.Sprintf("%s; charset=utf-8", this.contentType)
 			default:
 			}
@@ -339,28 +440,42 @@ func (this *httpHandler) Output(w http.ResponseWriter) string {
 	return ""
 }
 
-func NewHttpHandler(r *http.Request) *httpHandler {
+func NewHttpHandler(r *http.Request, flags ...bool) *httpHandler {
 	if nil != r {
-		if rb, ok := p2.Get().(*bytes.Buffer); ok {
-			if wb, ok := p2.Get().(*bytes.Buffer); ok {
-				if _r, ok := p1.Get().(*httpHandler); ok {
+		if rb := bufferpool.Get(); nil != rb {
+			if wb := bufferpool.Get(); nil != wb {
+				if _r, ok := pool.Get().(*httpHandler); ok {
 					//
 					rb.Reset()
 					wb.Reset()
 					//
-					if "POST" == r.Method {
-						//
-						var buffer [1024]byte
-						//
-						r.ParseForm()
-						//
-						io.CopyBuffer(rb, r.Body, buffer[:])
-					}
-					//
 					_r.Request = r
+					_r.body = nil
 					//
-					atomic.StoreUint32(&_r.flags[flagDebug], flagDebugDisabled)
-					//
+					if 0 < len(flags) && flags[0] {
+						// 长度
+						if debugBufferLength := DebugBufferLength; 0 < debugBufferLength {
+							// 调试数据长度
+							if 1 > debugBufferLength {
+								debugBufferLength = 1
+							}
+							// 生成
+							if tr, err := rb.TeeReader(r.Body, int64(debugBufferLength*1024)); nil == err {
+								// 备份
+								_r.body = r.Body
+								// 替换
+								r.Body = tr
+							}
+						}
+						// 标记
+						atomic.StoreUint32(&_r.flags[flagDebug], flagDebugEnabled)
+					} else {
+						// 标记
+						atomic.StoreUint32(&_r.flags[flagDebug], flagDebugDisabled)
+					}
+					// 标记
+					atomic.StoreUint32(&_r.flags[flagOutput], flagOutputEnabled)
+					// 清空
 					_r.statusCode = http.StatusOK
 					_r.location = ""
 					_r.contentType = ""
@@ -374,10 +489,10 @@ func NewHttpHandler(r *http.Request) *httpHandler {
 					return _r
 				}
 				// 释放
-				p2.Put(wb)
+				wb.Free()
 			}
 			// 释放
-			p2.Put(rb)
+			rb.Free()
 		}
 	}
 	return nil
