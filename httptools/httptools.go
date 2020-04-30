@@ -189,7 +189,7 @@ func (this *httpHandler) SendJSAlert(args ...string) {
 	}
 
 	if "" != redirect {
-		msg = fmt.Sprintf(`<script>alert(%s); window.location.href = '%s';</script>`, msg, redirect)
+		msg = fmt.Sprintf(`<script>alert('%s'); window.location.href = '%s';</script>`, msg, redirect)
 	} else {
 		msg = fmt.Sprintf(`<h3>%s</h3>`, msg)
 	}
