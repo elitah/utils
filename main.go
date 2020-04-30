@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/elitah/utils/atomic"
 	"github.com/elitah/utils/bufferpool"
 	"github.com/elitah/utils/cpu"
 	"github.com/elitah/utils/exepath"
@@ -36,6 +37,7 @@ func main() {
 
 	logs.Info("hello utils")
 
+	testAtomic()
 	testNumber()
 
 	//testBufferPool()
@@ -53,6 +55,50 @@ func main() {
 	testHash()
 
 	testSQLite()
+}
+
+func testAtomic() {
+	logs.Info("--- hello utils/atomic test ----------------------------------------------------------------")
+
+	xs32 := atomic.AInt32(0)
+
+	logs.Info(xs32.Add(1))
+	logs.Info(xs32.CAS(1, 0))
+	logs.Info(xs32.Load())
+	logs.Info(xs32.Swap(1))
+	logs.Info(xs32.Load())
+
+	xs64 := atomic.AInt64(0)
+
+	logs.Info(xs64.Add(1))
+	logs.Info(xs64.CAS(1, 0))
+	logs.Info(xs64.Load())
+	logs.Info(xs64.Swap(1))
+	logs.Info(xs64.Load())
+
+	xu32 := atomic.AUint32(0)
+
+	logs.Info(xu32.Add(1))
+	logs.Info(xu32.CAS(1, 0))
+	logs.Info(xu32.Load())
+	logs.Info(xu32.Swap(1))
+	logs.Info(xu32.Load())
+
+	xu64 := atomic.AUint64(0)
+
+	logs.Info(xu64.Add(1))
+	logs.Info(xu64.CAS(1, 0))
+	logs.Info(xu64.Load())
+	logs.Info(xu64.Swap(1))
+	logs.Info(xu64.Load())
+
+	xptr := atomic.AUintptr(0)
+
+	logs.Info(xptr.Add(1))
+	logs.Info(xptr.CAS(1, 0))
+	logs.Info(xptr.Load())
+	logs.Info(xptr.Swap(1))
+	logs.Info(xptr.Load())
 }
 
 func testNumber() {
