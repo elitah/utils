@@ -11,6 +11,10 @@ func (this *AInt32) Add(delta int32) int32 {
 	return atomic.AddInt32((*int32)(unsafe.Pointer(this)), delta)
 }
 
+func (this *AInt32) Sub(delta int32) int32 {
+	return atomic.AddInt32((*int32)(unsafe.Pointer(this)), 0-delta)
+}
+
 func (this *AInt32) CAS(old, new int32) bool {
 	return atomic.CompareAndSwapInt32((*int32)(unsafe.Pointer(this)), old, new)
 }

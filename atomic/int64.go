@@ -11,6 +11,10 @@ func (this *AInt64) Add(delta int64) int64 {
 	return atomic.AddInt64((*int64)(unsafe.Pointer(this)), delta)
 }
 
+func (this *AInt64) Sub(delta int64) int64 {
+	return atomic.AddInt64((*int64)(unsafe.Pointer(this)), 0-delta)
+}
+
 func (this *AInt64) CAS(old, new int64) bool {
 	return atomic.CompareAndSwapInt64((*int64)(unsafe.Pointer(this)), old, new)
 }

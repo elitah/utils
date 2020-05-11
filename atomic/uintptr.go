@@ -11,6 +11,10 @@ func (this *AUintptr) Add(delta uintptr) uintptr {
 	return atomic.AddUintptr((*uintptr)(unsafe.Pointer(this)), delta)
 }
 
+func (this *AUintptr) Sub(delta uintptr) uintptr {
+	return atomic.AddUintptr((*uintptr)(unsafe.Pointer(this)), 0-delta)
+}
+
 func (this *AUintptr) CAS(old, new uintptr) bool {
 	return atomic.CompareAndSwapUintptr((*uintptr)(unsafe.Pointer(this)), old, new)
 }

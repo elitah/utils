@@ -11,6 +11,10 @@ func (this *AUint64) Add(delta uint64) uint64 {
 	return atomic.AddUint64((*uint64)(unsafe.Pointer(this)), delta)
 }
 
+func (this *AUint64) Sub(delta uint64) uint64 {
+	return atomic.AddUint64((*uint64)(unsafe.Pointer(this)), ^uint64(delta-1))
+}
+
 func (this *AUint64) CAS(old, new uint64) bool {
 	return atomic.CompareAndSwapUint64((*uint64)(unsafe.Pointer(this)), old, new)
 }

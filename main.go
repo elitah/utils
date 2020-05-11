@@ -67,6 +67,8 @@ func testAtomic() {
 	logs.Info(xs32.Load())
 	logs.Info(xs32.Swap(1))
 	logs.Info(xs32.Load())
+	logs.Info(xs32.Sub(1))
+	logs.Info(xs32.Load())
 
 	xs64 := atomic.AInt64(0)
 
@@ -74,6 +76,8 @@ func testAtomic() {
 	logs.Info(xs64.CAS(1, 0))
 	logs.Info(xs64.Load())
 	logs.Info(xs64.Swap(1))
+	logs.Info(xs64.Load())
+	logs.Info(xs64.Sub(1))
 	logs.Info(xs64.Load())
 
 	xu32 := atomic.AUint32(0)
@@ -83,6 +87,8 @@ func testAtomic() {
 	logs.Info(xu32.Load())
 	logs.Info(xu32.Swap(1))
 	logs.Info(xu32.Load())
+	logs.Info(xu32.Sub(1))
+	logs.Info(xu32.Load())
 
 	xu64 := atomic.AUint64(0)
 
@@ -91,6 +97,8 @@ func testAtomic() {
 	logs.Info(xu64.Load())
 	logs.Info(xu64.Swap(1))
 	logs.Info(xu64.Load())
+	logs.Info(xu64.Sub(1))
+	logs.Info(xu64.Load())
 
 	xptr := atomic.AUintptr(0)
 
@@ -98,6 +106,8 @@ func testAtomic() {
 	logs.Info(xptr.CAS(1, 0))
 	logs.Info(xptr.Load())
 	logs.Info(xptr.Swap(1))
+	logs.Info(xptr.Load())
+	logs.Info(xptr.Sub(1))
 	logs.Info(xptr.Load())
 }
 
