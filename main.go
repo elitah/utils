@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/elitah/utils/aes"
 	"github.com/elitah/utils/atomic"
 	"github.com/elitah/utils/bufferpool"
 	"github.com/elitah/utils/cpu"
@@ -37,6 +38,8 @@ func main() {
 
 	logs.Info("hello utils")
 
+	testAES()
+
 	testAtomic()
 	testNumber()
 
@@ -55,6 +58,26 @@ func main() {
 	testHash()
 
 	testSQLite()
+}
+
+func testAES() {
+	logs.Info("--- hello utils/aes test ----------------------------------------------------------------")
+
+	if t0 := aes.NewAESTool("123456"); nil != t0 {
+		if t1 := aes.NewAESTool("123456"); nil != t1 {
+			t0.EncryptInit()
+
+			t0.Write([]byte("exampleplaintext"))
+
+			t0.Encrypt(nil)
+
+			t1.Write(t0.Bytes())
+
+			t1.Decrypt(nil)
+
+			logs.Info(t1.String())
+		}
+	}
 }
 
 func testAtomic() {
