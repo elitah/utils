@@ -5,6 +5,8 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
+	"encoding/base64"
+	"encoding/hex"
 	"io"
 )
 
@@ -72,4 +74,36 @@ func (this *AESTool) Decrypt(data []byte) error {
 	} else {
 		return err
 	}
+}
+
+func (this *AESTool) WriteByHexString(data string) error {
+	if _data, err := hex.DecodeString(data); nil == err {
+		if _, err = this.Buffer.Write(_data); nil == err {
+			return nil
+		} else {
+			return err
+		}
+	} else {
+		return err
+	}
+}
+
+func (this *AESTool) ReadByHexString() string {
+	return hex.EncodeToString(this.Buffer.Bytes())
+}
+
+func (this *AESTool) WriteByBase64(data string) error {
+	if _data, err := base64.StdEncoding.DecodeString(data); nil == err {
+		if _, err = this.Buffer.Write(_data); nil == err {
+			return nil
+		} else {
+			return err
+		}
+	} else {
+		return err
+	}
+}
+
+func (this *AESTool) ReadByBase64() string {
+	return base64.StdEncoding.EncodeToString(this.Buffer.Bytes())
 }
