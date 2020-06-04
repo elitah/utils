@@ -105,9 +105,7 @@ func DecodeStringWithSeq(s string) ([]byte, error) {
 	list := strings.FieldsFunc(s, func(r rune) bool {
 		if unicode.IsNumber(r) {
 			return false
-		} else if 'a' <= r && 'f' >= r {
-			return false
-		} else if 'A' <= r && 'F' >= r {
+		} else if unicode.IsLetter(r) {
 			return false
 		}
 		return true
