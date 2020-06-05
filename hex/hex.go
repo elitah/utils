@@ -8,43 +8,93 @@ import (
 	"math/bits"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"unicode"
 )
 
-const hextable = "0123456789abcdef"
+const hextable_l = "0123456789abcdef"
+const hextable_u = "0123456789ABCDEF"
 
 var (
+	lowercase = uint32(1)
+
 	empty = errors.New("Empty string")
 )
 
-func Encode(dst, src []byte, sep ...byte) int {
-	j := 0
-	max := len(dst) - 2
-	for _, v := range src {
-		dst[j] = hextable[v>>4]
-		dst[j+1] = hextable[v&0x0f]
-		if max > j && 0 < len(sep) && 0 != sep[0] {
-			dst[j+2] = sep[0]
-			j += 3
-		} else {
-			j += 2
+func OutputLowerCase(enabled bool) {
+	if enabled {
+		atomic.StoreUint32(&lowercase, 1)
+		return
+	}
+	atomic.StoreUint32(&lowercase, 0)
+}
+
+func EncodedLenWithSeq(n int) int {
+	return (n * 3) - 1
+}
+
+func Encode(dst, src []byte, sep ...byte) (n int) {
+	if 0 == len(sep) || 2 > len(src) {
+		if hex.EncodedLen(len(src)) <= len(dst) {
+			return hex.Encode(dst, src)
+		}
+		return 0
+	}
+	if 0x20 <= sep[0] && 0x7A >= sep[0] {
+		if _n := (len(dst) + 1) / 3; 0 < _n {
+			//
+			table := []byte(hextable_u)
+			//
+			if 0x0 == atomic.LoadUint32(&lowercase) {
+				table = []byte(hextable_l)
+			}
+			//
+			if _n < len(src) {
+				src = src[:_n]
+			}
+			//
+			for i, item := range src {
+				if 0 < i {
+					dst[n] = sep[0]
+					n++
+				}
+				dst[n] = table[item>>4]
+				dst[n+1] = table[item&0x0f]
+				n += 2
+			}
 		}
 	}
-	return len(src) * 2
+	return
 }
 
 func EncodeToString(src []byte, sep ...byte) string {
 	if 0 < len(src) {
-		var dst []byte
-		if 2 <= len(src) && 0 < len(sep) && 0 != sep[0] {
-			dst = make([]byte, hex.EncodedLen(len(src))+len(src)-1)
-			Encode(dst, src, sep[0])
-		} else {
-			dst = make([]byte, hex.EncodedLen(len(src)))
-			Encode(dst, src)
+		var s strings.Builder
+		var r byte
+		//
+		table := []byte(hextable_u)
+		//
+		if 0x0 == atomic.LoadUint32(&lowercase) {
+			table = []byte(hextable_l)
 		}
-		return string(dst)
+		//
+		if 0 < len(sep) && 0x20 <= sep[0] && 0x7A >= sep[0] {
+			r = sep[0]
+		}
+		//
+		s.Grow(EncodedLenWithSeq(len(src)))
+		//
+		for i, item := range src {
+			if 0 < r && 0 < i {
+				s.WriteByte(r)
+			}
+			s.WriteByte(table[item>>4])
+			s.WriteByte(table[item&0x0f])
+		}
+		//
+		return s.String()
 	}
+	//
 	return ""
 }
 
