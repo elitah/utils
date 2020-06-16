@@ -14,6 +14,8 @@ import (
 type HttpProxy struct {
 	ConnectTimeout time.Duration
 
+	Hijack func(net.Conn, *http.Request, string, string) bool
+
 	Dial func(context.Context, string, string) (net.Conn, error)
 }
 
@@ -37,6 +39,12 @@ func (this *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						port = "443"
 					} else {
 						port = "80"
+					}
+				}
+				// 劫持
+				if nil != this.Hijack {
+					if this.Hijack(conn_remote, r, host, port) {
+						return
 					}
 				}
 				// 修正代理接口
