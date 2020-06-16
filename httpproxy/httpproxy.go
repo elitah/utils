@@ -16,7 +16,7 @@ type HttpProxy struct {
 
 	Hijack func(net.Conn, *http.Request, string, string) bool
 
-	Dial func(context.Context, string, string) (net.Conn, error)
+	DialContext func(context.Context, string, string) (net.Conn, error)
 }
 
 func (this *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -47,13 +47,8 @@ func (this *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 						return
 					}
 				}
-				// 修正代理接口
-				if nil == this.Dial {
-					var d net.Dialer
-					this.Dial = d.DialContext
-				}
 				// 建立连接
-				if conn_local, err := this.Dial(r.Context(), "tcp", fmt.Sprintf("%s:%s", host, port)); nil == err {
+				if conn_local, err := this.Dial(r.Context(), "tcp", host, port); nil == err {
 					// 退出时关闭代理连接
 					defer conn_local.Close()
 					// 判断请求模式
@@ -83,4 +78,26 @@ func (this *HttpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else {
 		logs.Error("unable get target address")
 	}
+}
+
+func (this *HttpProxy) Dial(ctx context.Context, network, host, port string) (net.Conn, error) {
+	// 修正代理接口
+	if nil == this.DialContext {
+		this.DialContext = (&net.Dialer{}).DialContext
+	}
+
+	if time.Second <= this.ConnectTimeout {
+		// 检查context是否存在有效期
+		// 如果不存在则指定超时时间
+		if _, ok := ctx.Deadline(); !ok {
+			//
+			var cancel context.CancelFunc
+			//
+			ctx, cancel = context.WithTimeout(ctx, this.ConnectTimeout)
+			//
+			defer cancel()
+		}
+	}
+
+	return this.DialContext(ctx, network, fmt.Sprintf("%s:%s", host, port))
 }
