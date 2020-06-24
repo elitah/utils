@@ -66,8 +66,14 @@ func WithTicket(interval int, fn func(time.Time)) signalOption {
 	return nil
 }
 
-func Signal(options ...signalOption) {
+func Signal(options ...signalOption) (err error) {
 	var opts signalOptions
+
+	defer func() {
+		if r := recover(); nil != r {
+			err = fmt.Errorf("Panic error: %v", r)
+		}
+	}()
 
 	for _, fn := range options {
 		if nil != fn {
@@ -124,6 +130,8 @@ func Signal(options ...signalOption) {
 			return
 		}
 	}
+
+	return
 }
 
 func signalEqual(s1, s2 os.Signal) bool {
