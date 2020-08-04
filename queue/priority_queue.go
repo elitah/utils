@@ -2,12 +2,15 @@ package queue
 
 import (
 	"container/heap"
+	"strings"
 	"sync"
 	"sync/atomic"
 )
 
 type QItem interface {
 	GetPriority() int64
+
+	String() string
 }
 
 type PriorityQueue struct {
@@ -22,6 +25,10 @@ func (this *PriorityQueue) Init() {
 	if atomic.CompareAndSwapUint32(&this.flag, 0x0, 0x1) {
 		this.Lock()
 		defer this.Unlock()
+
+		if 0 == cap(this.list) {
+			this.list = make([]QItem, 0, 32)
+		}
 
 		heap.Init(this)
 	}
@@ -73,5 +80,19 @@ func (this *PriorityQueue) PopItem() QItem {
 			return item
 		}
 	}
+
 	return nil
+}
+
+func (this *PriorityQueue) String() string {
+	var b strings.Builder
+
+	this.Lock()
+	defer this.Unlock()
+
+	for _, item := range this.list {
+		b.WriteString(item.String())
+	}
+
+	return b.String()
 }
