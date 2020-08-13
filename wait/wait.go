@@ -1,8 +1,10 @@
 package wait
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
+	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -14,6 +16,10 @@ type signalOptions struct {
 
 	fnNotify func(os.Signal) bool
 	fnTicket func(time.Time)
+
+	fnSelect1 func(chan os.Signal)
+	fnSelect2 func(chan os.Signal, chan time.Time)
+	fnSelect3 func(<-chan os.Signal, <-chan time.Time)
 
 	tInterval int
 }
@@ -52,14 +58,33 @@ func WithNotify(fn func(os.Signal) bool) signalOption {
 }
 
 func WithTicket(interval int, fn func(time.Time)) signalOption {
-	if nil != fn {
+	if 0 < interval {
 		return func(opts *signalOptions) {
 			opts.fnTicket = fn
+			opts.tInterval = interval
+		}
+	}
+	return nil
+}
 
-			if 1 <= interval {
-				opts.tInterval = interval
-			} else {
-				opts.tInterval = 3
+func WithSelect(fn interface{}) signalOption {
+	if nil != fn {
+		return func(opts *signalOptions) {
+			switch result := fn.(type) {
+			case func(chan os.Signal):
+				opts.fnSelect1 = result
+				opts.fnSelect2 = nil
+				opts.fnSelect3 = nil
+			case func(chan os.Signal, chan time.Time):
+				opts.fnSelect1 = nil
+				opts.fnSelect2 = result
+				opts.fnSelect3 = nil
+			case func(<-chan os.Signal, <-chan time.Time):
+				opts.fnSelect1 = nil
+				opts.fnSelect2 = nil
+				opts.fnSelect3 = result
+			default:
+				panic("WithSelect: received parameter is not valid")
 			}
 		}
 	}
@@ -95,7 +120,82 @@ func Signal(options ...signalOption) (err error) {
 		close(sig)
 	}()
 
-	if nil != opts.fnTicket && 1 <= opts.tInterval {
+	if nil != opts.fnSelect1 || nil != opts.fnSelect2 || nil != opts.fnSelect3 {
+		_sig := make(chan os.Signal)
+
+		go func() {
+			for s := range sig {
+				//
+				_sig <- s
+				//
+				if nil != opts.fnNotify {
+					if !opts.fnNotify(s) {
+						continue
+					}
+				}
+				//
+				close(_sig)
+				//
+				return
+			}
+		}()
+
+		if nil != opts.fnSelect1 {
+			opts.fnSelect1(_sig)
+		} else {
+			var flag uint32
+
+			_ticker := make(chan time.Time)
+
+			atomic.StoreUint32(&flag, 0x1)
+
+			if 1 <= opts.tInterval {
+				ticker := time.NewTicker(time.Duration(opts.tInterval) * time.Second)
+
+				defer ticker.Stop()
+
+				go func() {
+					for t := range ticker.C {
+						//
+						if atomic.CompareAndSwapUint32(&flag, 0x1, 0x2) {
+							//
+							_ticker <- t
+							//
+							atomic.StoreUint32(&flag, 0x1)
+						}
+						//
+						if nil != opts.fnTicket {
+							opts.fnTicket(t)
+						}
+					}
+				}()
+			}
+
+			if nil != opts.fnSelect2 {
+				opts.fnSelect2(_sig, _ticker)
+			} else {
+				opts.fnSelect3(_sig, _ticker)
+			}
+
+			for {
+				if atomic.CompareAndSwapUint32(&flag, 0x1, 0x0) {
+					//
+					close(_ticker)
+					//
+					break
+				} else {
+					select {
+					case <-_ticker:
+					default:
+					}
+				}
+			}
+		}
+
+		return
+	}
+
+	if 1 <= opts.tInterval {
 		ticker := time.NewTicker(time.Duration(opts.tInterval) * time.Second)
 
 		defer ticker.Stop()
@@ -114,17 +214,17 @@ func Signal(options ...signalOption) (err error) {
 				return
 			case t, ok := <-ticker.C:
 				if ok {
-					opts.fnTicket(t)
+					if nil != opts.fnTicket {
+						opts.fnTicket(t)
+					}
 				}
 			}
 		}
 	} else {
-		for {
-			if s, ok := <-sig; ok {
-				if nil != opts.fnNotify {
-					if !opts.fnNotify(s) {
-						continue
-					}
+		for s := range sig {
+			if nil != opts.fnNotify {
+				if !opts.fnNotify(s) {
+					continue
 				}
 			}
 			return
