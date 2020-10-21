@@ -74,14 +74,14 @@ func (this *limitedWriter) Write(p []byte) (int, error) {
 	if f, ok := this.w.(interface {
 		Len() int
 	}); ok {
-		if n := f.Len(); this.max > int64(n) {
+		if n := int64(f.Len()); this.max > n {
 			// 计算数据长度
-			if _n := len(p); this.max-int64(n) > int64(_n) {
+			if _n := int64(len(p)); this.max-n > _n {
 				n = _n
 			} else {
-				n = int(this.max - int64(n))
+				n = this.max - n
 			}
-			return this.w.Write(p[:n])
+			return this.w.Write(p[:int(n)])
 		}
 	}
 	return len(p), nil
@@ -94,9 +94,14 @@ type readCloser struct {
 }
 
 func (this *readCloser) Close() error {
+	//
 	if nil != this.lw {
 		pLimitedWriter.Put(this.lw)
+		this.lw = nil
 	}
+	//
+	pReadCloser.Put(this)
+	//
 	return nil
 }
 
@@ -149,6 +154,7 @@ func (this *Buffer) AddRefer(n int) int64 {
 
 func (this *Buffer) Free() (n int64) {
 	if n = int64(this.refcnt.Add(-1)); 0 == n {
+		this.Reset()
 		this.pool.Pool.Put(this)
 	}
 	return
