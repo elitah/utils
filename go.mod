@@ -8,6 +8,6 @@ require (
 	github.com/elitah/fast-io v0.0.2
 	github.com/mattn/go-sqlite3 v1.10.0
 	github.com/shiena/ansicolor v0.0.0-20151119151921-a422bbe96644 // indirect
-	golang.org/x/crypto v0.0.0-20200214034016-1d94cc7ab1c6
+	golang.org/x/crypto v0.1.0
 	gvisor.dev/gvisor v0.0.0-20191204034220-80b7ba0c9709
 )
