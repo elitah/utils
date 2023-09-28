@@ -19,7 +19,6 @@ import (
 	"github.com/elitah/utils/hex"
 	"github.com/elitah/utils/httptools"
 	"github.com/elitah/utils/logs"
-	"github.com/elitah/utils/mutex"
 	"github.com/elitah/utils/number"
 	"github.com/elitah/utils/platform"
 	"github.com/elitah/utils/random"
@@ -54,7 +53,6 @@ func main() {
 	testRandom()
 	testPlatform()
 	testCPU()
-	testMutex()
 	testHash()
 
 	testSQLite()
@@ -450,78 +448,6 @@ func testCPU() {
 	logs.Info("CPU usage is %.2f [busy: %.0f, total: %.0f]\n", cpuUsage, totalTicks-idleTicks, totalTicks)
 
 	logs.Info("--------------------------------------------------------------------------------------------")
-}
-
-func testMutex() {
-	var r1 mutex.Mutex
-	var r2 mutex.TMutex
-	var n1 int
-	var n2 int
-
-	logs.Info("--- hello utils/mutex test ----------------------------------------------------------------")
-
-	for i := 0; 30 > i; i++ {
-		go func() {
-			s := time.Duration(random.NewRandomInt(900) + 100)
-			for {
-				if r1.TryLock() {
-					n1++
-					r1.Unlock()
-				}
-				time.Sleep(s * time.Millisecond)
-			}
-		}()
-	}
-
-	for i := 0; 30 > i; i++ {
-		go func() {
-			s := time.Duration(random.NewRandomInt(900) + 100)
-			for {
-				r1.Lock()
-				n1++
-				r1.Unlock()
-				time.Sleep(s * time.Millisecond)
-			}
-		}()
-	}
-
-	for i := 0; 30 > i; i++ {
-		go func() {
-			s := time.Duration(random.NewRandomInt(900) + 100)
-			for {
-				if r2.TryLock() {
-					n2++
-					r2.Unlock()
-				}
-				time.Sleep(s * time.Millisecond)
-			}
-		}()
-	}
-
-	for i := 0; 30 > i; i++ {
-		go func() {
-			s := time.Duration(random.NewRandomInt(900) + 100)
-			for {
-				r2.Lock()
-				n2++
-				r2.Unlock()
-				time.Sleep(s * time.Millisecond)
-			}
-		}()
-	}
-
-	for i := 0; 20 > i; i++ {
-		logs.Info("---", i)
-		if r1.TryLock() {
-			logs.Info(n1)
-			r1.Unlock()
-		}
-		if r2.TryLock() {
-			logs.Info(n2)
-			r2.Unlock()
-		}
-		time.Sleep(1 * time.Second)
-	}
 }
 
 func testHash() {
