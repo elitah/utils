@@ -5,7 +5,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/astaxie/beego/logs"
+	"github.com/elitah/beego/logs"
 )
 
 const (
